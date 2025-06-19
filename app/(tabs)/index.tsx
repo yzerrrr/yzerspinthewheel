@@ -1,75 +1,182 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import React, { useRef, useState } from 'react';
+import { View, Text, TouchableOpacity, Animated, TextInput, StyleSheet, Alert } from 'react-native';
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+const initialRewards = [""];
 
-export default function HomeScreen() {
+export default function App() {
+  const [rewards, setRewards] = useState(initialRewards); // Rewards array state
+  const [result, setResult] = useState('');
+  const [newReward, setNewReward] = useState(''); // New reward input state
+  const spinAnim = useRef(new Animated.Value(0)).current;
+
+  // Function to spin the wheel
+  const spinWheel = () => {
+    const randomIndex = Math.floor(Math.random() * rewards.length);
+    const angle = 3600 + randomIndex * (360 / rewards.length);
+
+    Animated.timing(spinAnim, {
+      toValue: angle,
+      duration: 4000,
+      useNativeDriver: true,
+    }).start(() => {
+      setResult(`You got: ${rewards[randomIndex]}`);
+    });
+  };
+
+  // Function to add a new reward to the wheel
+  const addReward = () => {
+    if (newReward.trim() !== '') {
+      setRewards([...rewards, newReward]);
+      setNewReward(''); // Clear the input after adding
+    }
+  };
+
+  // Function to remove a specific reward from the list
+  const removeReward = (rewardToRemove: string) => {
+    Alert.alert(
+      "Remove Reward",
+      `Are you sure you want to remove "${rewardToRemove}"?`,
+      [
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
+        {
+          text: "OK",
+          onPress: () => {
+            const updatedRewards = rewards.filter(reward => reward !== rewardToRemove);
+            setRewards(updatedRewards);
+          }
+        }
+      ]
+    );
+  };
+
+  // Interpolating the spin animation
+  const spin = spinAnim.interpolate({
+    inputRange: [0, 360],
+    outputRange: ['0deg', '360deg']
+  });
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+    <View style={styles.container}>
+      <Animated.View style={[styles.wheel, { transform: [{ rotate: spin }] }]}>
+        <Text style={styles.wheelText}>🎡</Text>
+      </Animated.View>
+
+      <TouchableOpacity style={styles.button} onPress={spinWheel}>
+        <Text style={styles.buttonText}>Spin</Text>
+      </TouchableOpacity>
+
+      <TextInput
+        style={styles.input}
+        value={newReward}
+        onChangeText={setNewReward}
+        placeholder="Enter a new reward"
+      />
+      <TouchableOpacity style={styles.addButton} onPress={addReward}>
+        <Text style={styles.addButtonText}>Add Reward</Text>
+      </TouchableOpacity>
+
+      <Text style={styles.resultText}>{result}</Text>
+
+      {/* Display the current rewards */}
+      <View style={styles.rewardsContainer}>
+        <Text style={styles.rewardsHeader}>Rewards:</Text>
+        {rewards.map((reward, index) => (
+          <View key={index} style={styles.rewardItemContainer}>
+            <Text style={styles.rewardItem}>{reward}</Text>
+            <TouchableOpacity 
+              style={styles.removeButton} 
+              onPress={() => removeReward(reward)}
+            >
+              <Text style={styles.removeButtonText}>Remove</Text>
+            </TouchableOpacity>
+          </View>
+        ))}
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5'
+  },
+  wheel: {
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    borderWidth: 5,
+    borderColor: '#333',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  wheelText: {
+    fontSize: 60,
+  },
+  button: {
+    backgroundColor: '#4CAF50',
+    padding: 15,
+    borderRadius: 10,
+    marginTop: 20,
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 18,
+  },
+  input: {
+    width: 250,
+    height: 40,
+    borderColor: '#ccc',
+    borderWidth: 1,
+    borderRadius: 5,
+    marginTop: 20,
+    paddingLeft: 10,
+  },
+  addButton: {
+    backgroundColor: '#2196F3',
+    padding: 10,
+    borderRadius: 5,
+    marginTop: 10,
+  },
+  addButtonText: {
+    color: '#fff',
+    fontSize: 16,
+  },
+  resultText: {
+    marginTop: 20,
+    fontSize: 22,
+    fontWeight: 'bold',
+  },
+  rewardsContainer: {
+    marginTop: 20,
+    alignItems: 'center',
+  },
+  rewardsHeader: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  rewardItemContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    marginVertical: 5,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  rewardItem: {
+    fontSize: 16,
+    marginRight: 10,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  removeButton: {
+    backgroundColor: '#FF6347',
+    padding: 5,
+    borderRadius: 5,
+  },
+  removeButtonText: {
+    color: '#fff',
+    fontSize: 14,
   },
 });
